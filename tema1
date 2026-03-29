@@ -1,0 +1,35 @@
+#include <windows.h>
+#include <stdio.h>
+#include <tchar.h>
+
+void ListeazaSubchei(HKEY hRootKey, LPCTSTR subKeyPath) {
+    HKEY hKey;
+    TCHAR achKey[255];
+    DWORD cbName;
+    FILETIME ftLastWriteTime;
+    DWORD i, retCode;
+    DWORD cSubKeys = 0;
+    DWORD cbMaxSubKey;
+
+    if (RegOpenKeyEx(hRootKey, subKeyPath, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        RegQueryInfoKey(hKey, NULL, NULL, NULL, &cSubKeys, &cbMaxSubKey, NULL, NULL, NULL, NULL, NULL, NULL);
+
+        for (i = 0; i < cSubKeys; i++) {
+            cbName = 255;
+            retCode = RegEnumKeyEx(hKey, i, achKey, &cbName, NULL, NULL, NULL, &ftLastWriteTime);
+
+            if (retCode == ERROR_SUCCESS) {
+                _tprintf(TEXT("%s\n"), achKey);
+            }
+        }
+
+        RegCloseKey(hKey);
+    } else {
+        printf("Eroare la deschiderea cheii.\n");
+    }
+}
+
+int main() {
+    ListeazaSubchei(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE"));
+    return 0;
+}
