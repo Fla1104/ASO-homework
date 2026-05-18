@@ -1,0 +1,99 @@
+﻿@page "/"
+@using BlazorApp.Data
+@using BlazorApp.Models
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+
+<PageTitle>Lista mea TODO</PageTitle>
+
+<div class="container mt-5" style="max-width: 600px;">
+    <h2 class="text-center mb-4">📝 My TODO List (Blazor)</h2>
+
+    <div class="input-group mb-4">
+        <input type="text" @bind="newTodoTitle" class="form-control" placeholder="Ce ai de făcut astăzi?" @onkeyup="HandleKeyUp" />
+        <button class="btn btn-primary" @onclick="AddTodo">Adaugă</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">@errorMessage</div>
+    }
+
+    <ul class="list-group">
+        @foreach (var item in todoItems)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center @(item.IsCompleted ? "list-group-item-secondary" : "")">
+                
+                <div class="d-flex align-items-center">
+                    <input type="checkbox" checked="@item.IsCompleted" @onchange="() => ToggleTodo(item)" class="form-check-input me-2" />
+                    <span style="@(item.IsCompleted ? "text-decoration: line-through;" : "")">
+                        @item.Title
+                    </span>
+                </div>
+
+                <button class="btn btn-danger btn-sm" @onclick="() => DeleteTodo(item)">❌</button>
+            </li>
+        }
+    </ul>
+    
+    @if (!todoItems.Any())
+    {
+        <p class="text-center text-muted mt-3">Nicio sarcină adăugată momentan. Relaxează-te!</p>
+    }
+</div>
+
+@code {
+    private List<TodoItem> todoItems = new();
+    private string newTodoTitle = string.Empty;
+    private string errorMessage = string.Empty;
+
+    // Se execută când se încarcă pagina
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTodos();
+    }
+
+    private async Task LoadTodos()
+    {
+        todoItems = await DbContext.TodoItems.OrderByDescending(t => t.CreatedAt).ToListAsync();
+    }
+
+    private async Task AddTodo()
+    {
+        if (string.IsNullOrWhiteSpace(newTodoTitle))
+        {
+            errorMessage = "Titlul este obligatoriu!";
+            return;
+        }
+
+        var newItem = new TodoItem { Title = newTodoTitle };
+        DbContext.TodoItems.Add(newItem);
+        await DbContext.SaveChangesAsync();
+
+        newTodoTitle = string.Empty;
+        errorMessage = string.Empty;
+        await LoadTodos(); // Reîncărcăm lista
+    }
+
+    private async Task ToggleTodo(TodoItem item)
+    {
+        item.IsCompleted = !item.IsCompleted;
+        await DbContext.SaveChangesAsync();
+        await LoadTodos();
+    }
+
+    private async Task DeleteTodo(TodoItem item)
+    {
+        DbContext.TodoItems.Remove(item);
+        await DbContext.SaveChangesAsync();
+        await LoadTodos();
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddTodo();
+        }
+    }
+}
